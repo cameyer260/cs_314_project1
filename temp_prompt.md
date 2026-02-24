@@ -1,4 +1,4 @@
-Read PLAN.md. We are currently on phase 1.
+Read PLAN.md. We are currently on phase 2
 
 Please implement this step in P1_510.c.
 

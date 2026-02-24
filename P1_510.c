@@ -97,156 +97,116 @@ int rand_sleep(int max_time)
 int main(void)
 {
     int i;
-    int sleep_time;
-    int sem_id_01, sem_id_02;
-    int shm_id;
-    struct shared_memory *p_shm;
-    int shm_size;
-    union semun argument;
-    int ret_val;
+    pid_t pid;
+    int status;
+    int child_id;
 
-    /* Initialize random seed */
     srand((unsigned int)time(NULL));
 
-    printf("=== PHASE 1: IPC Setup Test ===\n\n");
+    printf("=== PHASE 2: Fork System Call Test ===\n\n");
 
-    /* ===== Task 1.5: Test Semaphore Creation ===== */
-    printf("Task 1.5: Testing semaphore creation...\n");
+    /* ===== Task 2.1: Test Single fork() ===== */
+    printf("Task 2.1: Testing single fork()...\n");
+    printf("Parent PID: %d\n\n", getpid());
 
-    /* Create semaphore S1 (key 8370) */
-    sem_id_01 = semget(SEM_KEY_01, 1, 0666 | IPC_CREAT);
-    if (sem_id_01 < 0)
+    pid = fork();
+
+    if (pid < 0)
     {
-        fprintf(stderr, "Failed to create semaphore S1. Terminating...\n");
+        fprintf(stderr, "Fork failed. Terminating...\n");
         exit(1);
     }
-    printf("  Created semaphore S1 with key %d, id %d\n", SEM_KEY_01, sem_id_01);
-
-    /* Initialize semaphore S1 to 1 */
-    argument.val = 1;
-    if (semctl(sem_id_01, 0, SETVAL, argument) < 0)
+    else if (pid == 0)
     {
-        fprintf(stderr, "Failed to initialize semaphore S1. Terminating...\n");
-        exit(1);
-    }
-    printf("  Initialized semaphore S1 to value 1\n");
-
-    /* Create semaphore S2 (key 8371) */
-    sem_id_02 = semget(SEM_KEY_02, 1, 0666 | IPC_CREAT);
-    if (sem_id_02 < 0)
-    {
-        fprintf(stderr, "Failed to create semaphore S2. Terminating...\n");
-        exit(1);
-    }
-    printf("  Created semaphore S2 with key %d, id %d\n", SEM_KEY_02, sem_id_02);
-
-    /* Initialize semaphore S2 to 1 */
-    argument.val = 1;
-    if (semctl(sem_id_02, 0, SETVAL, argument) < 0)
-    {
-        fprintf(stderr, "Failed to initialize semaphore S2. Terminating...\n");
-        exit(1);
-    }
-    printf("  Initialized semaphore S2 to value 1\n");
-
-    /* ===== Task 1.6: Test Shared Memory Creation ===== */
-    printf("\nTask 1.6: Testing shared memory creation...\n");
-
-    /* Get size of shared memory structure */
-    shm_size = sizeof(struct shared_memory);
-    if (shm_size <= 0)
-    {
-        fprintf(stderr, "sizeof error in acquiring shared memory size. Terminating...\n");
-        exit(1);
-    }
-
-    /* Create shared memory segment */
-    shm_id = shmget(SHM_KEY, shm_size, 0666 | IPC_CREAT);
-    if (shm_id < 0)
-    {
-        fprintf(stderr, "Failed to create shared memory. Terminating...\n");
-        exit(1);
-    }
-    printf("  Created shared memory with key %d, id %d, size %d bytes\n", SHM_KEY, shm_id, shm_size);
-
-    /* Attach shared memory */
-    p_shm = (struct shared_memory *)shmat(shm_id, NULL, 0);
-    if (p_shm == (struct shared_memory *)-1)
-    {
-        fprintf(stderr, "Failed to attach shared memory. Terminating...\n");
-        exit(1);
-    }
-    printf("  Attached shared memory to process\n");
-
-    /* Initialize shared memory values */
-    p_shm->ready_count = 0;
-    p_shm->start_flag = 0;
-    p_shm->bw1 = 0;
-    p_shm->bw2 = 0;
-    p_shm->ba1 = 0;
-    p_shm->ba2 = 0;
-    p_shm->ba3 = 0;
-    p_shm->bather_count = 0;
-    printf("  Initialized shared memory values to 0\n");
-
-    /* ===== Task 1.4: Test rand_sleep function ===== */
-    printf("\nTask 1.4: Testing rand_sleep function...\n");
-    for (i = 0; i < 5; i++)
-    {
-        sleep_time = rand_sleep(BOILERMAN_TIME_01_A);
-        printf("  Random sleep time %d: %d microseconds (%.3f seconds)\n", 
-               i + 1, sleep_time, (float)sleep_time / 1000000.0);
-    }
-
-    /* ===== Cleanup: Delete IPC resources ===== */
-    printf("\nCleaning up IPC resources...\n");
-
-    /* Detach shared memory */
-    ret_val = shmdt(p_shm);
-    if (ret_val != 0)
-    {
-        fprintf(stderr, "Failed to detach shared memory.\n");
+        /* Child process */
+        printf("I am the child (PID: %d, PPID: %d)\n", getpid(), getppid());
+        usleep(100000);
+        printf("Child process exiting.\n");
+        exit(0);
     }
     else
     {
-        printf("  Detached shared memory\n");
+        /* Parent process */
+        printf("I am the parent (PID: %d)\n", getpid());
+        printf("Parent waiting for child (child PID: %d)...\n", pid);
+        wait(&status);
+        printf("Child process terminated.\n");
     }
 
-    /* Delete shared memory */
-    ret_val = shmctl(shm_id, IPC_RMID, NULL);
-    if (ret_val != 0)
+    printf("\nTask 2.1 complete.\n");
+
+    /* ===== Task 2.2: Document fork() Behavior ===== */
+    printf("\n=== Task 2.2: fork() Behavior Notes ===\n");
+    printf("Variables INHERITED by child (copied):\n");
+    printf("  - All variables (get a COPY of parent's memory)\n");
+    printf("  - File descriptors\n");
+    printf("  - Signal handlers\n");
+    printf("  - Working directory\n");
+    printf("\nVariables NOT inherited by child:\n");
+    printf("  - PID (process ID) - child gets new PID\n");
+    printf("  - PPID (parent process ID) - child's PPID is parent's PID\n");
+    printf("  - Pending signals (reset to empty)\n");
+    printf("  - File locks\n");
+    printf("\nNOTE: Child gets a COPY of parent's memory, not shared memory.\n");
+    printf("      Changes to variables in child do NOT affect parent.\n");
+
+    /* ===== Task 2.3: Test Sequential fork() Calls ===== */
+    printf("\n=== Task 2.3: Testing Sequential fork() Calls ===\n");
+    printf("Creating 2 child processes sequentially...\n\n");
+
+    /* First fork */
+    child_id = 1;
+    pid = fork();
+
+    if (pid < 0)
     {
-        fprintf(stderr, "Failed to delete shared memory.\n");
+        fprintf(stderr, "First fork failed. Terminating...\n");
+        exit(1);
     }
-    else
+    else if (pid == 0)
     {
-        printf("  Deleted shared memory\n");
+        /* First child process */
+        printf("Child %d created (PID: %d, PPID: %d)\n", child_id, getpid(), getppid());
+        usleep(200000);
+        printf("Child %d (PID: %d) exiting.\n", child_id, getpid());
+        exit(0);
     }
 
-    /* Delete semaphore S1 */
-    ret_val = semctl(sem_id_01, 0, IPC_RMID);
-    if (ret_val != 0)
+    /* Parent continues here */
+    printf("Parent: Created first child (PID: %d)\n", pid);
+
+    /* Second fork */
+    child_id = 2;
+    pid = fork();
+
+    if (pid < 0)
     {
-        fprintf(stderr, "Failed to delete semaphore S1.\n");
+        fprintf(stderr, "Second fork failed. Terminating...\n");
+        exit(1);
     }
-    else
+    else if (pid == 0)
     {
-        printf("  Deleted semaphore S1\n");
+        /* Second child process */
+        printf("Child %d created (PID: %d, PPID: %d)\n", child_id, getpid(), getppid());
+        usleep(100000);
+        printf("Child %d (PID: %d) exiting.\n", child_id, getpid());
+        exit(0);
     }
 
-    /* Delete semaphore S2 */
-    ret_val = semctl(sem_id_02, 0, IPC_RMID);
-    if (ret_val != 0)
+    /* Parent continues here */
+    printf("Parent: Created second child (PID: %d)\n", pid);
+    printf("Parent: Waiting for both children...\n\n");
+
+    /* Wait for both children */
+    for (i = 0; i < 2; i++)
     {
-        fprintf(stderr, "Failed to delete semaphore S2.\n");
-    }
-    else
-    {
-        printf("  Deleted semaphore S2\n");
+        pid = wait(&status);
+        printf("Parent: Child with PID %d terminated.\n", pid);
     }
 
-    printf("\n=== PHASE 1 Complete ===\n");
-    printf("All IPC resources created, tested, and cleaned up successfully.\n");
+    printf("\n=== PHASE 2 Complete ===\n");
+    printf("All fork tests completed successfully.\n");
+    printf("Verify with 'ps -a' that no orphan processes remain.\n");
 
     return 0;
 }

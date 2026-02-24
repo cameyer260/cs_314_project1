@@ -68,21 +68,21 @@ This plan implements a solution for the "synchronized swimming pool control prob
 ## PHASE 2: Fork System Call Test (1 hour)
 
 ### Task 2.1: Test Single fork()
-- [ ] Write a simple test that creates one child process
-- [ ] Child prints "I am the child"
-- [ ] Parent prints "I am the parent"
-- [ ] Parent waits for child with `wait()`
+- [x] Write a simple test that creates one child process
+- [x] Child prints "I am the child"
+- [x] Parent prints "I am the parent"
+- [x] Parent waits for child with `wait()`
 
 ### Task 2.2: Understand fork() Behavior
-- [ ] Document which variables are inherited (all variables, file descriptors)
-- [ ] Document which are NOT inherited (PID, PPID, pending signals)
-- [ ] Note: Child gets a COPY of parent's memory, not shared
+- [x] Document which variables are inherited (all variables, file descriptors)
+- [x] Document which are NOT inherited (PID, PPID, pending signals)
+- [x] Note: Child gets a COPY of parent's memory, not shared
 
 ### Task 2.3: Test Sequential fork() Calls
-- [ ] Create 2 child processes sequentially (not in a loop)
-- [ ] Each child identifies itself with a unique ID
-- [ ] Parent waits for both children
-- [ ] Verify order of creation and termination
+- [x] Create 2 child processes sequentially (not in a loop)
+- [x] Each child identifies itself with a unique ID
+- [x] Parent waits for both children
+- [x] Verify order of creation and termination
 
 ---
 

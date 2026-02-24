@@ -16,11 +16,11 @@ This plan implements a solution for the "synchronized swimming pool control prob
 
 ---
 
-## PHASE 1: Environment Setup & IPC Test (1 hour)
+## PHASE 1: Environment Setup & IPC Test (1 hour) ✓ COMPLETE
 
 ### Task 1.1: Create Basic File Structure
-- [ ] Create `P1_510.c` in project root
-- [ ] Add file header comment block with:
+- [x] Create `P1_510.c` in project root
+- [x] Add file header comment block with:
   - "CS314 Project #1 solution"
   - Last-three: 510
   - Course section #: 003
@@ -40,28 +40,28 @@ This plan implements a solution for the "synchronized swimming pool control prob
 ```
 
 ### Task 1.3: Define Constants with Personal Keys
-- [ ] Define `NUM_REPEAT` = 50
-- [ ] Define timing constants (BATHER_TIME_xx_A/B, BOILERMAN_TIME_xx_A/B, SAFEGUARD_TIME_A/B)
-- [ ] Define semaphore keys using personal range: SEM_KEY_01 = 8370, SEM_KEY_02 = 8371
-- [ ] Define shared memory key: SHM_KEY = 7205
+- [x] Define `NUM_REPEAT` = 50
+- [x] Define timing constants (BATHER_TIME_xx_A/B, BOILERMAN_TIME_xx_A/B, SAFEGUARD_TIME_A/B)
+- [x] Define semaphore keys using personal range: SEM_KEY_01 = 8370, SEM_KEY_02 = 8371
+- [x] Define shared memory key: SHM_KEY = 7205
 
 ### Task 1.4: Implement rand_sleep() Function
-- [ ] Create function to generate random sleep time (0 to max_time)
-- [ ] Test: compile and run a simple loop to verify random timing works
+- [x] Create function to generate random sleep time (0 to max_time)
+- [x] Test: compile and run a simple loop to verify random timing works
 
 ### Task 1.5: Test Semaphore Creation/Deletion
-- [ ] Create a semaphore using `semget()` with key 8370
-- [ ] Initialize semaphore to 1 using `semctl()` with SETVAL
-- [ ] Delete semaphore using `semctl()` with IPC_RMID
-- [ ] Verify with `ipcs -s` command before/after
+- [x] Create a semaphore using `semget()` with key 8370
+- [x] Initialize semaphore to 1 using `semctl()` with SETVAL
+- [x] Delete semaphore using `semctl()` with IPC_RMID
+- [x] Verify with `ipcs -s` command before/after
 
 ### Task 1.6: Test Shared Memory Creation/Deletion
-- [ ] Create shared memory using `shmget()` with key 7205
-- [ ] Attach using `shmat()`
-- [ ] Initialize a test value
-- [ ] Detach using `shmdt()`
-- [ ] Delete using `shmctl()` with IPC_RMID
-- [ ] Verify with `ipcs -m` command before/after
+- [x] Create shared memory using `shmget()` with key 7205
+- [x] Attach using `shmat()`
+- [x] Initialize a test value
+- [x] Detach using `shmdt()`
+- [x] Delete using `shmctl()` with IPC_RMID
+- [x] Verify with `ipcs -m` command before/after
 
 ---
 
@@ -317,6 +317,10 @@ while (bw1 == 1 || bw2 == 1)  // While boilermen are active
 - [ ] Add in-line comments explaining logic
 - [ ] Ensure consistent indentation
 - [ ] Remove any debug printf statements (only required printf allowed)
+
+### Task 6.4: Remove macOS Compatibility Code
+- [ ] Remove the `#ifndef __APPLE__` block around `union semun` definition
+- [ ] Ensure `union semun` is defined unconditionally for SIUE Unix server
 
 ---
 

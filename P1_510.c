@@ -8,65 +8,67 @@
  *
  * Spring 2026
  *
- *
  * Synchronized Swimming Pool Control Problem
  * Using UNIX standard semaphores and shared memory
  *
  **********************************
  ****/
 
-#include <stdio.h>          // for printf
-#include <stdlib.h>         // for rand, exit
-#include <sys/types.h>      // for pid_t
-#include <unistd.h>         // for usleep, fork
-#include <time.h>           // for time
-#include <sys/ipc.h>        // for IPC
-#include <sys/shm.h>        // for shared memory
-#include <sys/sem.h>        // for semaphores
-#include <sys/wait.h>       // for wait
+#include <stdio.h>          /* printf */
+#include <stdlib.h>         /* rand, exit */
+#include <sys/types.h>      /* pid_t */
+#include <unistd.h>         /* usleep, fork */
+#include <time.h>           /* time */
+#include <sys/ipc.h>        /* IPC constants */
+#include <sys/shm.h>        /* shmget, shmat, shmdt, shmctl */
+#include <sys/sem.h>        /* semget, semctl, semop */
+#include <sys/wait.h>       /* wait */
 
-/* ========== CONSTANTS (Task 1.3) ========== */
+/* ========== CONSTANTS ========== */
 
-#define NUM_REPEAT                 50       // each boiler-man repeats
+#define NUM_REPEAT                 50       /* number of times each boiler-man heats water */
 
-/* Personal keys from 04_personal_keys.md */
-#define SEM_KEY_01                 8370     // semaphore key (MUTEX/S1)
-#define SEM_KEY_02                 8371     // semaphore key (S2)
-#define SHM_KEY                    7205     // shared memory key
+/* Personal IPC keys (from 04_personal_keys.md) */
+#define SEM_KEY_01                 8370     /* semaphore S1: pool access mutex */
+#define SEM_KEY_02                 8371     /* semaphore S2: bather_count mutex */
+#define SHM_KEY                    7205     /* shared memory key */
 
-/* Timing constants */
-#define BATHER_TIME_01_A           300000   // 300ms = 0.3 seconds
-#define BATHER_TIME_01_B           800000   // 800ms = 0.8 seconds
+/* 
+ * Timing constants (in microseconds)
+ * _A = time outside critical section (waiting)
+ * _B = time inside critical section (working)
+ */
+#define BATHER_TIME_01_A           300000   /* A1 time outside pool (~0.3 seconds) */
+#define BATHER_TIME_01_B           800000   /* A1 time inside pool (~0.8 seconds) */
 
-#define BATHER_TIME_02_A           300000   // 300ms = 0.3 seconds
-#define BATHER_TIME_02_B           800000   // 800ms = 0.8 seconds
+#define BATHER_TIME_02_A           300000   /* A2 time outside pool (~0.3 seconds) */
+#define BATHER_TIME_02_B           800000   /* A2 time inside pool (~0.8 seconds) */
 
-#define BATHER_TIME_03_A           300000   // 300ms = 0.3 seconds
-#define BATHER_TIME_03_B           800000   // 800ms = 0.8 seconds
+#define BATHER_TIME_03_A           300000   /* A3 time outside pool (~0.3 seconds) */
+#define BATHER_TIME_03_B           800000   /* A3 time inside pool (~0.8 seconds) */
 
-#define BOILERMAN_TIME_01_A        1200000  // 1200ms = 1.2 seconds
-#define BOILERMAN_TIME_01_B        1600000  // 1600ms = 1.6 seconds
+#define BOILERMAN_TIME_01_A        1200000  /* B1 wait between heating (~1.2 seconds) */
+#define BOILERMAN_TIME_01_B        1600000  /* B1 time heating water (~1.6 seconds) */
 
-#define BOILERMAN_TIME_02_A        1200000  // 1200ms = 1.2 seconds
-#define BOILERMAN_TIME_02_B        1600000  // 1600ms = 1.6 seconds
+#define BOILERMAN_TIME_02_A        1200000  /* B2 wait between heating (~1.2 seconds) */
+#define BOILERMAN_TIME_02_B        1600000  /* B2 time heating water (~1.6 seconds) */
 
-#define SAFEGUARD_TIME_A           1200000  // 1200ms = 1.2 seconds
-#define SAFEGUARD_TIME_B           1600000  // 1600ms = 1.6 seconds
+#define SAFEGUARD_TIME_A           1200000  /* S wait between inspections (~1.2 seconds) */
+#define SAFEGUARD_TIME_B           1600000  /* S time inspecting (~1.6 seconds) */
 
 /* ========== SHARED MEMORY STRUCTURE ========== */
 
 struct shared_memory {
-    int ready_count;      // # of processes ready
-    int start_flag;       // 1 = all processes can start
-    int bw1, bw2;         // boiler-man status (1=active, 0=done)
-    int ba1, ba2, ba3;    // bather status (1=active, 0=done)
-    int bather_count;     // # of bathers in pool
+    int ready_count;      /* number of child processes ready to start */
+    int start_flag;       /* 1 = all processes can begin work */
+    int bw1, bw2;         /* boiler-man status: 1=active, 0=finished */
+    int ba1, ba2, ba3;    /* bather status: 1=active, 0=finished */
+    int bather_count;     /* number of bathers currently in pool */
 };
 
-/* ========== SEMAPHORE UNION (required for semctl) ========== */
-/* NOTE: This #ifndef block is only for local macOS compilation. */
-/* The SIUE Unix server (os.cs.siue.edu) does NOT define semun in headers, */
-/* so the union must be defined. This block will be removed before submission. */
+/* ========== SEMAPHORE UNION ========== */
+/* Required for semctl() on some systems (including SIUE Unix server) */
+
 #ifndef __APPLE__
 union semun {
     int val;
@@ -81,7 +83,8 @@ int rand_sleep(int max_time);
 void semaphore_wait(int sem_id);
 void semaphore_signal(int sem_id);
 
-/* ========== RAND_SLEEP FUNCTION (Task 1.4) ========== */
+/* ========== RAND_SLEEP FUNCTION ========== */
+/* Returns random value between 0 and max_time microseconds */
 
 int rand_sleep(int max_time)
 {
@@ -94,22 +97,26 @@ int rand_sleep(int max_time)
     return ((int)temp_sleeptime);
 }
 
-/* ========== SEMAPHORE OPERATIONS (Phase 4) ========== */
+/* ========== SEMAPHORE WAIT (P OPERATION) ========== */
+/* Decrements semaphore. Blocks if semaphore value is 0. */
 
 void semaphore_wait(int sem_id)
 {
     struct sembuf op;
-    op.sem_num = 0;
-    op.sem_op = -1;      /* decrement (P operation) */
-    op.sem_flg = 0;      /* blocking */
+    op.sem_num = 0;      /* semaphore index in set */
+    op.sem_op = -1;      /* decrement operation */
+    op.sem_flg = 0;      /* blocking mode */
     semop(sem_id, &op, 1);
 }
+
+/* ========== SEMAPHORE SIGNAL (V OPERATION) ========== */
+/* Increments semaphore. Wakes up waiting processes. */
 
 void semaphore_signal(int sem_id)
 {
     struct sembuf op;
-    op.sem_num = 0;
-    op.sem_op = 1;       /* increment (V operation) */
+    op.sem_num = 0;      /* semaphore index in set */
+    op.sem_op = 1;       /* increment operation */
     op.sem_flg = 0;
     semop(sem_id, &op, 1);
 }
@@ -119,24 +126,24 @@ void semaphore_signal(int sem_id)
 int main(void)
 {
     int i;
+    int sleep_time;
     pid_t pid;
     int status;
+    int my_id;
     
-    int sem_id_01;
+    int sem_id_01, sem_id_02;
     int shm_id;
     struct shared_memory *p_shm;
     int shm_size;
     union semun argument;
     int ret_val;
-    
-    int expected_total;
 
     srand((unsigned int)time(NULL));
 
-    printf("=== PHASE 4: Synchronization with Semaphores ===\n\n");
-
-    /* ===== Create IPC Resources ===== */
-    printf("Creating IPC resources...\n");
+    /* 
+     * ===== CREATE IPC RESOURCES =====
+     * Must be done BEFORE forking so all processes inherit access
+     */
 
     shm_size = sizeof(struct shared_memory);
     shm_id = shmget(SHM_KEY, shm_size, 0666 | IPC_CREAT);
@@ -145,7 +152,6 @@ int main(void)
         fprintf(stderr, "Failed to create shared memory. Terminating...\n");
         exit(1);
     }
-    printf("  Created shared memory (key: %d, id: %d)\n", SHM_KEY, shm_id);
 
     p_shm = (struct shared_memory *)shmat(shm_id, NULL, 0);
     if (p_shm == (struct shared_memory *)-1)
@@ -153,19 +159,18 @@ int main(void)
         fprintf(stderr, "Failed to attach shared memory. Terminating...\n");
         exit(1);
     }
-    printf("  Attached shared memory\n");
 
-    /* Initialize shared memory */
-    p_shm->ready_count = 0;
-    p_shm->start_flag = 0;
-    p_shm->bw1 = 0;
-    p_shm->bw2 = 0;
-    p_shm->ba1 = 0;
-    p_shm->ba2 = 0;
-    p_shm->ba3 = 0;
-    p_shm->bather_count = 0;    /* use this field as test counter */
+    /* Initialize shared memory values */
+    p_shm->ready_count = 0;     /* no children ready yet */
+    p_shm->start_flag = 0;      /* children must wait */
+    p_shm->bw1 = 1;             /* B1 is active */
+    p_shm->bw2 = 1;             /* B2 is active */
+    p_shm->ba1 = 1;             /* A1 is active */
+    p_shm->ba2 = 1;             /* A2 is active */
+    p_shm->ba3 = 1;             /* A3 is active */
+    p_shm->bather_count = 0;    /* no bathers in pool */
 
-    /* Create semaphore S1 (mutex) */
+    /* Create semaphore S1: mutex for pool access */
     sem_id_01 = semget(SEM_KEY_01, 1, 0666 | IPC_CREAT);
     if (sem_id_01 < 0)
     {
@@ -178,73 +183,293 @@ int main(void)
         fprintf(stderr, "Failed to initialize semaphore S1. Terminating...\n");
         exit(1);
     }
-    printf("  Created semaphore S1 (key: %d, id: %d, init: 1)\n\n", SEM_KEY_01, sem_id_01);
+
+    /* Create semaphore S2: mutex for bather_count variable */
+    sem_id_02 = semget(SEM_KEY_02, 1, 0666 | IPC_CREAT);
+    if (sem_id_02 < 0)
+    {
+        fprintf(stderr, "Failed to create semaphore S2. Terminating...\n");
+        exit(1);
+    }
+    argument.val = 1;
+    if (semctl(sem_id_02, 0, SETVAL, argument) < 0)
+    {
+        fprintf(stderr, "Failed to initialize semaphore S2. Terminating...\n");
+        exit(1);
+    }
 
     /* 
-     * ===== Task 4.3: Test Mutual Exclusion =====
-     * Both parent and child increment a counter 100000 times each.
-     * With semaphore protection, final value should be exactly 200000.
-     * Without protection, race conditions would cause incorrect value.
+     * ===== CREATE 5 CHILD PROCESSES =====
+     * Order: B1, B2, A1, A2, A3
+     * Each child: signals ready, waits for start_flag, does work, exits
      */
-    printf("Task 4.3: Testing mutual exclusion...\n");
-    printf("Parent and child will each increment counter 100000 times.\n");
-    printf("Expected final value: 200000\n\n");
 
-    p_shm->bather_count = 0;
-    expected_total = 200000;
-
+    /* ===== FORK B1 (Boiler-man 1) ===== */
     pid = fork();
     if (pid < 0)
     {
-        fprintf(stderr, "Fork failed. Terminating...\n");
+        fprintf(stderr, "Fork B1 failed. Terminating...\n");
         exit(1);
     }
     else if (pid == 0)
     {
-        /* --- CHILD PROCESS --- */
-        for (i = 0; i < 100000; i++)
+        /* --- B1 CHILD PROCESS --- */
+        my_id = 1;
+        p_shm->ready_count++;               /* signal parent: ready */
+        while (p_shm->start_flag == 0)      /* wait for all processes ready */
         {
-            semaphore_wait(sem_id_01);
-            p_shm->bather_count++;
-            semaphore_signal(sem_id_01);
+            usleep(1000);
         }
-        printf("Child finished incrementing.\n");
+
+        /* Main loop: heat water NUM_REPEAT times */
+        for (i = 0; i < NUM_REPEAT; i++)
+        {
+            sleep_time = rand_sleep(BOILERMAN_TIME_01_A);
+            usleep(sleep_time);             /* wait outside critical section */
+
+            semaphore_wait(sem_id_01);      /* enter critical section */
+
+            printf("B%d starts his boiler ...\n", my_id);
+            sleep_time = rand_sleep(BOILERMAN_TIME_01_B);
+            usleep(sleep_time);             /* time heating water */
+            printf("B%d is leaving the bathing area ..\n", my_id);
+
+            semaphore_signal(sem_id_01);    /* exit critical section */
+        }
+
+        p_shm->bw1 = 0;                     /* mark B1 as finished */
         exit(0);
     }
 
-    /* --- PARENT PROCESS --- */
-    for (i = 0; i < 100000; i++)
+    /* ===== FORK B2 (Boiler-man 2) ===== */
+    pid = fork();
+    if (pid < 0)
     {
-        semaphore_wait(sem_id_01);
-        p_shm->bather_count++;
-        semaphore_signal(sem_id_01);
+        fprintf(stderr, "Fork B2 failed. Terminating...\n");
+        exit(1);
     }
-    printf("Parent finished incrementing.\n");
-
-    /* Wait for child to finish */
-    wait(&status);
-
-    printf("\nFinal counter value: %d\n", p_shm->bather_count);
-    if (p_shm->bather_count == expected_total)
+    else if (pid == 0)
     {
-        printf("SUCCESS: Counter reached expected value (no race condition).\n");
-    }
-    else
-    {
-        printf("FAILURE: Counter mismatch (race condition detected).\n");
+        /* --- B2 CHILD PROCESS --- */
+        my_id = 2;
+        p_shm->ready_count++;
+        while (p_shm->start_flag == 0)
+        {
+            usleep(1000);
+        }
+
+        for (i = 0; i < NUM_REPEAT; i++)
+        {
+            sleep_time = rand_sleep(BOILERMAN_TIME_02_A);
+            usleep(sleep_time);
+
+            semaphore_wait(sem_id_01);
+
+            printf("B%d starts his boiler ...\n", my_id);
+            sleep_time = rand_sleep(BOILERMAN_TIME_02_B);
+            usleep(sleep_time);
+            printf("B%d is leaving the bathing area ..\n", my_id);
+
+            semaphore_signal(sem_id_01);
+        }
+
+        p_shm->bw2 = 0;
+        exit(0);
     }
 
-    /* ===== Cleanup IPC Resources ===== */
-    printf("\nCleaning up IPC resources...\n");
-    
+    /* ===== FORK A1 (Bather 1) ===== */
+    pid = fork();
+    if (pid < 0)
+    {
+        fprintf(stderr, "Fork A1 failed. Terminating...\n");
+        exit(1);
+    }
+    else if (pid == 0)
+    {
+        /* --- A1 CHILD PROCESS --- */
+        my_id = 1;
+        p_shm->ready_count++;
+        while (p_shm->start_flag == 0)
+        {
+            usleep(1000);
+        }
+
+        /* 
+         * Main loop: swim while boiler-men are active
+         * Uses readers-writer pattern: multiple bathers can enter pool
+         */
+        while (p_shm->bw1 == 1 || p_shm->bw2 == 1)
+        {
+            sleep_time = rand_sleep(BATHER_TIME_01_A);
+            usleep(sleep_time);             /* wait outside pool */
+
+            /* Entry protocol: first bather locks pool */
+            semaphore_wait(sem_id_02);
+            p_shm->bather_count++;
+            if (p_shm->bather_count == 1)
+            {
+                semaphore_wait(sem_id_01);  /* first bather locks S1 */
+            }
+            semaphore_signal(sem_id_02);
+
+            /* Critical section: in the pool */
+            printf("A%d is entering the swimming pool\n", my_id);
+            sleep_time = rand_sleep(BATHER_TIME_01_B);
+            usleep(sleep_time);
+            printf("A%d is leaving the swimming pool\n", my_id);
+
+            /* Exit protocol: last bather unlocks pool */
+            semaphore_wait(sem_id_02);
+            p_shm->bather_count--;
+            if (p_shm->bather_count == 0)
+            {
+                semaphore_signal(sem_id_01); /* last bather unlocks S1 */
+            }
+            semaphore_signal(sem_id_02);
+        }
+
+        p_shm->ba1 = 0;
+        exit(0);
+    }
+
+    /* ===== FORK A2 (Bather 2) ===== */
+    pid = fork();
+    if (pid < 0)
+    {
+        fprintf(stderr, "Fork A2 failed. Terminating...\n");
+        exit(1);
+    }
+    else if (pid == 0)
+    {
+        /* --- A2 CHILD PROCESS --- */
+        my_id = 2;
+        p_shm->ready_count++;
+        while (p_shm->start_flag == 0)
+        {
+            usleep(1000);
+        }
+
+        while (p_shm->bw1 == 1 || p_shm->bw2 == 1)
+        {
+            sleep_time = rand_sleep(BATHER_TIME_02_A);
+            usleep(sleep_time);
+
+            semaphore_wait(sem_id_02);
+            p_shm->bather_count++;
+            if (p_shm->bather_count == 1)
+            {
+                semaphore_wait(sem_id_01);
+            }
+            semaphore_signal(sem_id_02);
+
+            printf("A%d is entering the swimming pool\n", my_id);
+            sleep_time = rand_sleep(BATHER_TIME_02_B);
+            usleep(sleep_time);
+            printf("A%d is leaving the swimming pool\n", my_id);
+
+            semaphore_wait(sem_id_02);
+            p_shm->bather_count--;
+            if (p_shm->bather_count == 0)
+            {
+                semaphore_signal(sem_id_01);
+            }
+            semaphore_signal(sem_id_02);
+        }
+
+        p_shm->ba2 = 0;
+        exit(0);
+    }
+
+    /* ===== FORK A3 (Bather 3) ===== */
+    pid = fork();
+    if (pid < 0)
+    {
+        fprintf(stderr, "Fork A3 failed. Terminating...\n");
+        exit(1);
+    }
+    else if (pid == 0)
+    {
+        /* --- A3 CHILD PROCESS --- */
+        my_id = 3;
+        p_shm->ready_count++;
+        while (p_shm->start_flag == 0)
+        {
+            usleep(1000);
+        }
+
+        while (p_shm->bw1 == 1 || p_shm->bw2 == 1)
+        {
+            sleep_time = rand_sleep(BATHER_TIME_03_A);
+            usleep(sleep_time);
+
+            semaphore_wait(sem_id_02);
+            p_shm->bather_count++;
+            if (p_shm->bather_count == 1)
+            {
+                semaphore_wait(sem_id_01);
+            }
+            semaphore_signal(sem_id_02);
+
+            printf("A%d is entering the swimming pool\n", my_id);
+            sleep_time = rand_sleep(BATHER_TIME_03_B);
+            usleep(sleep_time);
+            printf("A%d is leaving the swimming pool\n", my_id);
+
+            semaphore_wait(sem_id_02);
+            p_shm->bather_count--;
+            if (p_shm->bather_count == 0)
+            {
+                semaphore_signal(sem_id_01);
+            }
+            semaphore_signal(sem_id_02);
+        }
+
+        p_shm->ba3 = 0;
+        exit(0);
+    }
+
+    /* 
+     * ===== PARENT PROCESS (SAFEGUARD S) =====
+     * Parent becomes the safeguard after creating all children
+     */
+
+    /* Wait for all 5 children to be ready */
+    while (p_shm->ready_count < 5)
+    {
+        usleep(1000);
+    }
+    p_shm->start_flag = 1;      /* tell all children to start */
+
+    /* Main loop: inspect while bathers are active */
+    while (p_shm->ba1 == 1 || p_shm->ba2 == 1 || p_shm->ba3 == 1)
+    {
+        sleep_time = rand_sleep(SAFEGUARD_TIME_A);
+        usleep(sleep_time);             /* wait between inspections */
+
+        semaphore_wait(sem_id_01);      /* enter critical section */
+
+        printf("S starts inspection ...\n");
+        sleep_time = rand_sleep(SAFEGUARD_TIME_B);
+        usleep(sleep_time);             /* time inspecting */
+        printf("S is leaving the bathing area ..\n");
+
+        semaphore_signal(sem_id_01);    /* exit critical section */
+    }
+
+    /* Wait for all children to terminate */
+    for (i = 0; i < 5; i++)
+    {
+        wait(&status);
+    }
+
+    /* 
+     * ===== CLEANUP IPC RESOURCES =====
+     * Safeguard is responsible for deleting all IPC objects
+     */
     ret_val = shmdt(p_shm);
     if (ret_val != 0)
     {
         fprintf(stderr, "Failed to detach shared memory.\n");
-    }
-    else
-    {
-        printf("  Detached shared memory\n");
     }
 
     ret_val = shmctl(shm_id, IPC_RMID, NULL);
@@ -252,22 +477,18 @@ int main(void)
     {
         fprintf(stderr, "Failed to delete shared memory.\n");
     }
-    else
-    {
-        printf("  Deleted shared memory\n");
-    }
 
     ret_val = semctl(sem_id_01, 0, IPC_RMID);
     if (ret_val != 0)
     {
         fprintf(stderr, "Failed to delete semaphore S1.\n");
     }
-    else
-    {
-        printf("  Deleted semaphore S1\n");
-    }
 
-    printf("\n=== PHASE 4 Complete ===\n");
+    ret_val = semctl(sem_id_02, 0, IPC_RMID);
+    if (ret_val != 0)
+    {
+        fprintf(stderr, "Failed to delete semaphore S2.\n");
+    }
 
     return 0;
 }

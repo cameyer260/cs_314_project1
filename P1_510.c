@@ -67,15 +67,13 @@ struct shared_memory {
 };
 
 /* ========== SEMAPHORE UNION ========== */
-/* Required for semctl() on some systems (including SIUE Unix server) */
+/* Required for semctl() on SIUE Unix server */
 
-#ifndef __APPLE__
 union semun {
     int val;
     struct semid_ds *buf;
     unsigned short *array;
 };
-#endif
 
 /* ========== FUNCTION PROTOTYPES ========== */
 

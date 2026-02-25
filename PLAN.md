@@ -263,26 +263,26 @@ while (bw1 == 1 || bw2 == 1)  // While boilermen are active
 ## PHASE 6: Cleanup and Final Verification
 
 ### Task 6.1: Implement Proper Cleanup Sequence
-- [ ] B1, B2, A1, A2, A3: exit after their loops
-- [ ] S (safeguard): waits for all 5 children using `wait()` loop
-- [ ] S: deletes semaphores using `semctl(sem_id, 0, IPC_RMID)`
-- [ ] S: detaches shared memory using `shmdt()`
-- [ ] S: deletes shared memory using `shmctl(shm_id, IPC_RMID, NULL)`
-- [ ] S: exits last
+- [x] B1, B2, A1, A2, A3: exit after their loops
+- [x] S (safeguard): waits for all 5 children using `wait()` loop
+- [x] S: deletes semaphores using `semctl(sem_id, 0, IPC_RMID)`
+- [x] S: detaches shared memory using `shmdt()`
+- [x] S: deletes shared memory using `shmctl(shm_id, IPC_RMID, NULL)`
+- [x] S: exits last
 
 ### Task 6.2: Verify No Resource Leaks
-- [ ] Run `ipcs -s` after program ends - should show no semaphores for my keys
-- [ ] Run `ipcs -m` after program ends - should show no shared memory for my keys
-- [ ] Run `ps -a` after program ends - should show no zombie processes
+- [x] Run `ipcs -s` after program ends - should show no semaphores for my keys
+- [x] Run `ipcs -m` after program ends - should show no shared memory for my keys
+- [x] Run `ps -a` after program ends - should show no zombie processes
 
 ### Task 6.3: Code Style Check
-- [ ] Add in-line comments explaining logic
-- [ ] Ensure consistent indentation
-- [ ] Remove any debug printf statements (only required printf allowed)
+- [x] Add in-line comments explaining logic
+- [x] Ensure consistent indentation
+- [x] Remove any debug printf statements (only required printf allowed)
 
 ### Task 6.4: Remove macOS Compatibility Code
-- [ ] Remove the `#ifndef __APPLE__` block around `union semun` definition
-- [ ] Ensure `union semun` is defined unconditionally for SIUE Unix server
+- [x] Remove the `#ifndef __APPLE__` block around `union semun` definition
+- [x] Ensure `union semun` is defined unconditionally for SIUE Unix server
 
 ---
 

@@ -89,58 +89,43 @@ This plan implements a solution for the "synchronized swimming pool control prob
 ## PHASE 3: Create Five Child Processes (1-4 hours)
 
 ### Task 3.1: Define Shared Memory Structure
-```c
-struct shared_memory {
-    int ready_count;      // # of processes ready
-    int start_flag;       // 1 = all processes can start
-    int bw1, bw2;         // boiler-man status (1=active, 0=done)
-    int ba1, ba2, ba3;    // bather status (1=active, 0=done)
-    int bather_count;     // # of bathers in pool
-};
-```
+- [x] Define shared_memory struct (already defined in Phase 1)
 
 ### Task 3.2: Create Shared Memory and Semaphores
-- [ ] Create shared memory segment (size = sizeof(struct shared_memory))
-- [ ] Attach shared memory to process
-- [ ] Initialize all shared memory fields to 0
-- [ ] Create semaphore S1 (mutex for pool access) - initialize to 1
-- [ ] Create semaphore S2 (bather count mutex) - initialize to 1
+- [x] Create shared memory segment (size = sizeof(struct shared_memory))
+- [x] Attach shared memory to process
+- [x] Initialize all shared memory fields to 0
+- [x] Create semaphore S1 (mutex for pool access) - initialize to 1
+- [x] Create semaphore S2 (bather count mutex) - initialize to 1
 
 ### Task 3.3: Implement Process Creation (Sequential fork)
-**CRITICAL: Create processes in this exact order:**
-1. Parent process becomes Safeguard (S)
-2. fork() → B1 (Boiler-man 1)
-3. fork() → B2 (Boiler-man 2)
-4. fork() → A1 (Bather 1)
-5. fork() → A2 (Bather 2)
-6. fork() → A3 (Bather 3)
+- [x] Fork B1 (Boiler-man 1)
+- [x] Fork B2 (Boiler-man 2)
+- [x] Fork A1 (Bather 1)
+- [x] Fork A2 (Bather 2)
+- [x] Fork A3 (Bather 3)
 
 ### Task 3.4: Assign Process IDs
-- [ ] After each fork(), assign a process identifier variable in the child
-- [ ] B1 gets ID=1, B2 gets ID=2, A1 gets ID=1, A2 gets ID=2, A3 gets ID=3
-- [ ] Parent (S) knows it's the safeguard
+- [x] B1 gets ID=1, B2 gets ID=2
+- [x] A1 gets ID=1, A2 gets ID=2, A3 gets ID=3
+- [x] Parent (S) knows it's the safeguard
 
 ### Task 3.5: Implement Startup Synchronization
-**Each child process must:**
-- [ ] Increment `ready_count` in shared memory
-- [ ] Wait (sleep or semaphore) until `start_flag == 1`
-
-**Parent (S) must:**
-- [ ] Wait until `ready_count == 5`
-- [ ] Set `start_flag = 1`
-- [ ] All 6 processes can now begin work
+- [x] Each child increments `ready_count` in shared memory
+- [x] Each child waits until `start_flag == 1` (using usleep polling, not busy loop)
+- [x] Parent waits until `ready_count == 5`
+- [x] Parent sets `start_flag = 1`
 
 ### Task 3.6: Verify Process Count
-- [ ] Run `ps -a` while program is running
-- [ ] Confirm exactly 6 processes exist (1 parent + 5 children)
-- [ ] Reference: `docs/assets/creating_five_child_processes.jpg`
+- [x] Run `ps -a` while program is running
+- [x] Confirm exactly 6 processes exist (1 parent + 5 children)
 
 ### Task 3.7: Test Clean Termination
-- [ ] Each child exits after a short delay
-- [ ] Parent waits for all 5 children using `wait()` in a loop
-- [ ] Parent deletes shared memory and semaphores
-- [ ] Parent exits last
-- [ ] Verify no orphan processes remain (`ps -a`)
+- [x] Each child exits after a short delay
+- [x] Parent waits for all 5 children using `wait()` in a loop
+- [x] Parent deletes shared memory and semaphores
+- [x] Parent exits last
+- [x] Verify no orphan processes remain (`ps -a`)
 
 ---
 

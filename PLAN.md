@@ -132,41 +132,18 @@ This plan implements a solution for the "synchronized swimming pool control prob
 ## PHASE 4: Synchronization with Semaphores (1-2 days)
 
 ### Task 4.1: Implement Semaphore Wait Operation
-```c
-void semaphore_wait(int sem_id) {
-    struct sembuf op;
-    op.sem_num = 0;
-    op.sem_op = -1;    // decrement (wait/P operation)
-    op.sem_flg = 0;    // blocking
-    semop(sem_id, &op, 1);
-}
-```
+- [x] Implement semaphore_wait() function
 
 ### Task 4.2: Implement Semaphore Signal Operation
-```c
-void semaphore_signal(int sem_id) {
-    struct sembuf op;
-    op.sem_num = 0;
-    op.sem_op = 1;     // increment (signal/V operation)
-    op.sem_flg = 0;
-    semop(sem_id, &op, 1);
-}
-```
+- [x] Implement semaphore_signal() function
 
 ### Task 4.3: Test Mutual Exclusion
-- [ ] Create a simple test where parent and child both increment a counter
-- [ ] Protect counter access with semaphore wait/signal
-- [ ] Verify counter reaches expected final value (no race condition)
+- [x] Create a simple test where parent and child both increment a counter
+- [x] Protect counter access with semaphore wait/signal
+- [x] Verify counter reaches expected final value (no race condition)
 
 ### Task 4.4: Implement Process Start Synchronization (No Spin-Wait!)
-**Option A: Use a semaphore for process start**
-- [ ] Create a start semaphore initialized to 0
-- [ ] Children wait on this semaphore
-- [ ] Parent signals 5 times after all children are created
-
-**Option B: Use shared memory with usleep() polling**
-- [ ] Children poll `start_flag` with small `usleep()` delays
-- [ ] NOT a busy loop because it includes sleep
+- [x] Using Option B: shared memory with usleep() polling (already implemented in Phase 3)
 
 ---
 

@@ -230,7 +230,7 @@ int main(void)
             printf("B%d starts his boiler ...\n", my_id);
             sleep_time = rand_sleep(BOILERMAN_TIME_01_B);
             usleep(sleep_time);             /* time heating water */
-            printf("B%d is leaving the bathing area ..\n", my_id);
+            printf("B%d finishes water heating\n", my_id);
 
             semaphore_signal(sem_id_01);    /* exit critical section */
         }
@@ -266,7 +266,7 @@ int main(void)
             printf("B%d starts his boiler ...\n", my_id);
             sleep_time = rand_sleep(BOILERMAN_TIME_02_B);
             usleep(sleep_time);
-            printf("B%d is leaving the bathing area ..\n", my_id);
+            printf("B%d finishes water heating\n", my_id);
 
             semaphore_signal(sem_id_01);
         }
@@ -449,7 +449,7 @@ int main(void)
         printf("S starts inspection ...\n");
         sleep_time = rand_sleep(SAFEGUARD_TIME_B);
         usleep(sleep_time);             /* time inspecting */
-        printf("S is leaving the bathing area ..\n");
+        printf("S finishes inspection\n");
 
         semaphore_signal(sem_id_01);    /* exit critical section */
     }

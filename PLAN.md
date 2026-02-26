@@ -312,24 +312,24 @@ Replace constants with values from `docs/05_test_configs.md`:
 
 | Requirement | Status |
 |-------------|--------|
-| (a) Single C file | ☐ |
-| (b) All 6 processes concurrent | ☐ |
-| (c) Safeguard creates B1, B2, A1, A2, A3 in order | ☐ |
-| (d) Children wait for all to be created | ☐ |
-| (e) Correct "entering" messages | ☐ |
-| (f) Correct "leaving" message for bathers | ☐ |
-| (g) Correct "finishes water heating" for boiler-men | ☐ |
-| (h) Correct "finishes inspection" for safeguard | ☐ |
-| (i) Random wait times used | ☐ |
-| (j) Bathing terminates after boiler-men finish | ☐ |
-| (k) Safeguard deletes IPC resources | ☐ |
-| (l) All timing constants defined | ☐ |
-| (m) Figures 2, 3, 4 structures followed | ☐ |
-| No starvation | ☐ |
-| No mutual exclusion violation (boiler-men, safeguard) | ☐ |
-| No deadlock | ☐ |
-| Multiple bathers can enter pool | ☐ |
-| No busy loop (spin wait) | ☐ |
+| (a) Single C file | ✓ |
+| (b) All 6 processes concurrent | ✓ |
+| (c) Safeguard creates B1, B2, A1, A2, A3 in order | ✓ |
+| (d) Children wait for all to be created | ✓ |
+| (e) Correct "entering" messages | ✓ |
+| (f) Correct "leaving" message for bathers | ✓ |
+| (g) Correct "finishes water heating" for boiler-men | ✓ |
+| (h) Correct "finishes inspection" for safeguard | ✓ |
+| (i) Random wait times used | ✓ |
+| (j) Bathing terminates after boiler-men finish | ✓ |
+| (k) Safeguard deletes IPC resources | ✓ |
+| (l) All timing constants defined | ✓ |
+| (m) Figures 2, 3, 4 structures followed | ✓ |
+| No starvation | ✓ |
+| No mutual exclusion violation (boiler-men, safeguard) | ✓ |
+| No deadlock | ✓ |
+| Multiple bathers can enter pool | ✓ |
+| No busy loop (spin wait) | ✓ |
 
 ---
 

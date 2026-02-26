@@ -298,13 +298,13 @@ Replace constants with values from `docs/05_test_configs.md`:
 ```
 
 ### Task 7.2: Run Extended Test
-- [ ] Compile and run with test config
-- [ ] Monitor for deadlocks (program hangs)
-- [ ] Monitor for starvation (one process never completes)
-- [ ] Verify all processes terminate correctly
+- [x] Compile and run with test config
+- [x] Monitor for deadlocks (program hangs)
+- [x] Monitor for starvation (one process never completes)
+- [x] Verify all processes terminate correctly
 
 ### Task 7.3: Restore Original Constants
-- [ ] Swap back to original timing values before submission
+- [x] Swap back to original timing values before submission
 
 ---
 
